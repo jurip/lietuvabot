@@ -1,9 +1,15 @@
 package com.example;
 
-public class YoutubeTag {
+public class YoutubeTag implements  Pair{
+    @Override
+    public String getChatId() {
+        return telegramId;
+    }
+
     public String getText() {
         return text;
     }
+
 
     public void setText(String text) {
         this.text = text;

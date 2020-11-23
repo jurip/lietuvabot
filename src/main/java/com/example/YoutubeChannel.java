@@ -1,6 +1,6 @@
 package com.example;
 
-public class YoutubeChannel {
+public class YoutubeChannel implements  Pair {
     public String getId() {
         return id;
     }
@@ -10,7 +10,7 @@ public class YoutubeChannel {
     }
 
     private String id;
-    private String telegramChannelId;
+    private String telegramId;
     private String name;
 
     public String getName() {
@@ -21,11 +21,22 @@ public class YoutubeChannel {
         this.name = name;
     }
 
-    public String getTelegramChannelId() {
-        return telegramChannelId;
+    public String getTelegramId() {
+        return telegramId;
     }
 
-    public void setTelegramChannelId(String telegramChannelId) {
-        this.telegramChannelId = telegramChannelId;
+    public void setTelegramId(String telegramId) {
+        this.telegramId = telegramId;
     }
+
+    @Override
+    public String getChatId() {
+        return telegramId;
+    }
+
+    @Override
+    public String getText() {
+        return id;
+    }
+
 }
