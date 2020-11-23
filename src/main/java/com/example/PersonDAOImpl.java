@@ -23,6 +23,12 @@ public class PersonDAOImpl implements PersonDAO {
 	public List<YoutubeChannel> getAllChannelsForChat(String telegramId){
 		return jdbcTemplate.query("select * from lietuva_channels where telegram_id=?",new Object[]{ telegramId}, new ChannelMapper());
 	}
+	@Override
+	public List<YoutubeTag> getAllTagsForChat(String telegramId) {
+		return jdbcTemplate.query("select * from lietuva_tags where telegram_id=?",new Object[]{telegramId}, new TagMapper());
+
+	}
+
 
 	public List<TelegramChat> getAllChats(){
 		return jdbcTemplate.query("select * from lietuva_chats",new Object[]{}, new ChatMapper());
@@ -37,39 +43,47 @@ public class PersonDAOImpl implements PersonDAO {
 	}
 
 	@Override
-	public void save(String id, String telegramId) {
+	public int save(String id, String telegramId) {
 
-		jdbcTemplate.update("INSERT INTO lietuva_videos(name, telegram_id) VALUES(?, ?)", id, telegramId);
-
-	}
-
-	@Override
-	public void addChannel(String id, String telegramId, String name) {
-
-		jdbcTemplate.update("INSERT INTO lietuva_channels(id, telegram_id, name) VALUES(?, ?, ?)", id, telegramId, name);
+		return jdbcTemplate.update("INSERT INTO lietuva_videos(name, telegram_id) VALUES(?, ?)", id, telegramId);
 
 	}
 
 	@Override
-	public void deleteChannel(String id,String telegramId) {
-		jdbcTemplate.update("DELETE FROM lietuva_channels WHERE id=? AND telegram_id=?", id, telegramId);
+	public int addChannel(String id, String telegramId, String name) {
+
+		return jdbcTemplate.update("INSERT INTO lietuva_channels(id, telegram_id, name) VALUES(?, ?, ?)", id, telegramId, name);
 
 	}
 
 	@Override
-	public List<YoutubeTag> getAllTags(String telegramId) {
-		return jdbcTemplate.query("select * from lietuva_tags where telegram_id=?",new Object[]{telegramId}, new TagMapper());
+	public int addChat(String id, String type, String name) {
+
+		return jdbcTemplate.update("INSERT INTO lietuva_chats(id, content, name) VALUES(?, ?, ?)", id, type, name);
 
 	}
 
 	@Override
-	public void addTag(String part, String telegramId) {
-		jdbcTemplate.update("INSERT INTO lietuva_tags(text, telegram_id) VALUES(?, ?)", part, telegramId);
+	public int deleteChannel(String id, String telegramId) {
+		return jdbcTemplate.update("DELETE FROM lietuva_channels WHERE id=? AND telegram_id=?", id, telegramId);
+
+	}
+	@Override
+	public int deleteChat(String id) {
+		return jdbcTemplate.update("DELETE FROM lietuva_chats WHERE id=?", id, id);
+
+	}
+
+
+
+	@Override
+	public int addTag(String part, String telegramId) {
+		return jdbcTemplate.update("INSERT INTO lietuva_tags(text, telegram_id) VALUES(?, ?)", part, telegramId);
 	}
 
 	@Override
-	public void deleteTag(String part, String telegramId) {
-		jdbcTemplate.update("DELETE FROM lietuva_tags WHERE text=? AND telegram_id=?", part, telegramId);
+	public int deleteTag(String part, String telegramId) {
+		return jdbcTemplate.update("DELETE FROM lietuva_tags WHERE text=? AND telegram_id=?", part, telegramId);
 
 	}
 

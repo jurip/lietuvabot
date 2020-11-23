@@ -4,17 +4,21 @@ import java.util.List;
 
 public interface PersonDAO {
     List<YoutubeChannel> getAllChannelsForChat(String telegramId);
+    List<YoutubeTag> getAllTagsForChat(String telegramId);
 
 	List<Video> getVideo(String text, String telegramId);
 	List<TelegramChat> getAllChats();
-    void save(String id, String telegramId);
-    void addChannel(String id, String telegramId, String name);
+    int save(String id, String telegramId);
+    int addChannel(String id, String telegramId, String name);
 
-    void deleteChannel(String part, String telegramId);
+    int deleteChannel(String part, String telegramId);
 
-    List<YoutubeTag> getAllTags(String telegramId);
+    int deleteChat(String id);
 
-    void addTag(String part, String telegramId);
 
-    void deleteTag(String part, String telegramId);
+    int addTag(String part, String telegramId);
+
+    int deleteTag(String part, String telegramId);
+
+    int addChat(String chatId, String type, String name);
 }

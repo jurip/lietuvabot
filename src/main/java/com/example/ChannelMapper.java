@@ -1,6 +1,5 @@
 package com.example;
 
-import org.springframework.jdbc.core.RowCallbackHandler;
 import org.springframework.jdbc.core.RowMapper;
 
 import java.sql.ResultSet;
@@ -11,7 +10,7 @@ public class ChannelMapper implements RowMapper<YoutubeChannel> {
 
         YoutubeChannel person = new YoutubeChannel();
         person.setId(resultSet.getString("id"));
-        person.setTelegramChannelId(resultSet.getString("telegram_id"));
+        person.setTelegramId(resultSet.getString("telegram_id"));
         person.setName(resultSet.getString("name"));
         return person;
     }
