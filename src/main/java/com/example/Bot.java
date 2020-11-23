@@ -21,13 +21,15 @@ import java.util.*;
  */
 @Component
 public class Bot {
-    private static final String CHAT_ID = "-1001227644468";
-    private static final String YOUTUBE_KEY = "AIzaSyAi12Y4EVYT59-ZUcrYvuNxEAQfCHT6X_w";
+    private static final String YOUTUBE_KEY = "AIzaSyAp4w7RT9B5FpEgDvH7hQ9gsrHcHgpPDdY";
 
     @BeanInject
     private PersonDAO botDAO;
 
+    RestTemplate restTemplate = new RestTemplate();
+
     private Logger log = LoggerFactory.getLogger(getClass());
+
 
     /**
      * This method processes incoming messages and return responses.
@@ -44,24 +46,48 @@ public class Bot {
 
         String result = "";
 
-        if(message.startsWith("/add ")){
+        if(message.startsWith("/addChat ")){
             String[] parts = message.split(" ");
-            botDAO.addChannel(parts[1], parts[2], parts[3]);
-            return "added";
-        }
-        if(message.startsWith("/delete ")){
-            String[] parts = message.split(" ");
-            botDAO.deleteChannel(parts[1], parts[2]);
-            return "deleted";
-        }
 
+            String GET_USER_ID = "https://api.telegram.org/bot1494127847:AAEd4bcPfnWYqVUKRFO63XF-bNfKObOgZIE/" +
+                    "sendMessage?chat_id=@"+ parts[1]+"&text=test";
+            log.info(GET_USER_ID);
+            Map resp = restTemplate.getForObject(GET_USER_ID, Map.class);
+            log.info(resp.toString());
+            if(resp.get("ok") == "false")
+                return resp.get("description").toString();
+
+            Long id = (Long) ((Map)((Map)(resp).get("result")).get("sender_chat")).get("id");
+
+            String type = "channels";
+            if(parts.length>=3 && parts[2]!="tags")
+                type = "tags";
+
+            return  "added " +botDAO.addChat(String.valueOf(id), type, parts[1])+ "with id "+id;
+            //message = "";
+        }
+        if(message.startsWith("/addChannel ")){
+            String[] parts = message.split(" ");
+            return "added "+botDAO.addChannel(parts[1], parts[2], parts[3]);
+
+        }
+        if(message.startsWith("/deleteChannel ")){
+            String[] parts = message.split(" ");
+            return "deleted "+botDAO.deleteChannel(parts[1], parts[2]);
+
+        }
+        if(message.startsWith("/deleteChat ")){
+            String[] parts = message.split(" ");
+            return "deleted "+botDAO.deleteChat(parts[1]);
+
+        }
 
         if(message.startsWith("/listChannels")){
             String[] parts = message.split(" ");
             List<YoutubeChannel> chs = botDAO.getAllChannelsForChat(parts[1]);
             for ( YoutubeChannel ch:
                  chs ) {
-                result = result + ch.getId()+" - "+ ch.getName()+", ";
+                result = result + ch.getText()+" - " + ch.getName()+ ", ";
             }
             return result;
         }
@@ -69,20 +95,17 @@ public class Bot {
 
         if(message.startsWith("/addTag ")){
             String[] parts = message.split(" ");
-            botDAO.addTag(parts[1], parts[2]);
-            return "tag added";
+            return "added "+botDAO.addTag(parts[1], parts[2]);
         }
         if(message.startsWith("/deleteTag ")){
             String[] parts = message.split(" ");
-            botDAO.deleteTag(parts[1], parts[2]);
-            return "tag deleted";
+            return "deleted "+botDAO.deleteTag(parts[1], parts[2]);
         }
-
 
         if(message.startsWith("/listTags")){
             result = "";
             String[] parts = message.split(" ");
-            List<YoutubeTag> tags = botDAO.getAllTags(parts[1]);
+            List<YoutubeTag> tags = botDAO.getAllTagsForChat(parts[1]);
             for ( YoutubeTag t:
                     tags ) {
                 result = result + t.getText()+", ";
@@ -96,91 +119,71 @@ public class Bot {
         }
         log.info("Received message: {}", message);
 
-        return result;
+        return result + message;
     }
 
     private void sendVideos(List<TelegramChat> chats) throws IOException {
 
-        RestTemplate restTemplate = new RestTemplate();
+
         for (TelegramChat chat:
              chats) {
-
-            if(chat.content.equals("channels")){
-                List<YoutubeChannel> channels = botDAO.getAllChannelsForChat(chat.getText());
-
-                for (YoutubeChannel channel:
-                        channels) {
-                    final String uri = "https://youtube.googleapis.com/youtube/v3/search?" +
-                            "part=id&channelId="
-                            + channel.getId()
-                            +
-                            "&order=date&maxResults=40" +
-                            "&key="+YOUTUBE_KEY;
-                    log.info("Sending: {}",uri);
-                    YoutubeResponce resp = restTemplate.getForObject(uri, YoutubeResponce.class);
-                    log.info("Recieved from youtube from channels {}", StringUtils.arrayToDelimitedString(resp.items, ","));
-                    Object[] items = resp.items;
-                    for (Object i:
-                            items) {
-                        Map item = (Map) i;
-                        String id = (String) ((Map)item.get("id")).get("videoId");
-                        boolean isNotSentBefore = botDAO.getVideo(id, chat.getText()).isEmpty();
-                        log.info("Video {} is not sent before: {}", id, isNotSentBefore);
-                        if(id != null && !id.isEmpty() && isNotSentBefore)
-                            sendVideoToTelegram(chat.getText(), id);
-                    }
-
-
-
-                }
-
-
+            if ((chat.content.equals("channels"))) {
+                sendAllChannelsToChat(restTemplate, chat, botDAO.getAllChannelsForChat(chat.getText()));
+            } else if((chat.content.equals("tags"))) {
+                sendAllTagsToChat(restTemplate, chat, botDAO.getAllTagsForChat(chat.getText()));
             }
-
-
-            if(chat.content.equals("tags")){
-
-                List<YoutubeTag> tags = botDAO.getAllTags(chat.getText());
-
-
-                for (YoutubeTag tag :
-                        tags) {
-
-                    final String uri = "https://www.googleapis.com/youtube/v3/search" +
-                            "?part=id&maxResults=20&q=" +
-                            tag.getText()
-                            + "&type=video&key=" + YOUTUBE_KEY;
-                    log.info("Request: {}", uri);
-                    YoutubeResponce resp = restTemplate.getForObject(uri, YoutubeResponce.class);
-                    log.info("Recieved from youtube from youtube tags {}", StringUtils.arrayToDelimitedString(resp.items, ","));
-
-                    Object[] items = resp.items;
-
-                    for (Object i :
-                            items) {
-                        Map item = (Map) i;
-                        String id = (String) ((Map) item.get("id")).get("videoId");
-                        log.info("Video id: {}", id);
-                        if (id != null && !id.isEmpty() && botDAO.getVideo(id, chat.getText()).isEmpty())
-                            log.info("sendVideoToTelegram {}", id);
-                        sendVideoToTelegram(chat.getText(), id);
-                        //    sendVideoToTelegram("-1001414463954",id);
-                        // sendVideoToTelegram("-1001481826976",id);
-                    }
-
-
-                }
-
-
-            }
-
-
-
 
 
         }
     }
 
+
+
+    private void sendAllChannelsToChat(RestTemplate restTemplate, TelegramChat chat, List<YoutubeChannel> channels) throws IOException {
+        for (Pair channel:
+                channels) {
+            YoutubeResponce resp = getYoutubeResponce(restTemplate, channel);
+            sendVideosFromResponce(chat, resp);
+
+        }
+    }
+    private void sendAllTagsToChat(RestTemplate restTemplate, TelegramChat chat, List<YoutubeTag> tags) throws IOException {
+        for (YoutubeTag tag:
+                tags) {
+            YoutubeResponce resp = getYoutubeResponce(restTemplate, tag);
+            sendVideosFromResponce(chat, resp);
+
+        }
+    }
+
+    private void sendVideosFromResponce(TelegramChat chat, YoutubeResponce resp) throws IOException {
+        Object[] items = resp.items;
+        for (Object i :
+                items) {
+            sendVideo(chat, (Map) i);
+        }
+    }
+
+
+    private void sendVideo(TelegramChat chat, Map i) throws IOException {
+        Map item = i;
+        String id = (String) ((Map)item.get("id")).get("videoId");
+        boolean isNotSentBefore = botDAO.getVideo(id, chat.getText()).isEmpty();
+        log.info("Video {} is not sent before: {}", id, isNotSentBefore);
+        if(id != null && !id.isEmpty() && isNotSentBefore)
+            sendVideoToTelegram(chat.getText(), id);
+    }
+
+    private YoutubeResponce getYoutubeResponce(RestTemplate restTemplate, Pair search) {
+        final String uri = (search instanceof  YoutubeChannel)?
+                    "https://youtube.googleapis.com/youtube/v3/search?part=id&channelId="+search.getText() +"&order=date&maxResults=40&key=" + YOUTUBE_KEY
+                    :"https://www.googleapis.com/youtube/v3/search?part=id&maxResults=20&q="+search.getText()+"&type=video&key=" + YOUTUBE_KEY;
+
+        log.info("Sending to telegram {}: {}",search.getChatId(), uri);
+        YoutubeResponce resp = restTemplate.getForObject(uri, YoutubeResponce.class);
+        log.info("Recieved from youtube: {}", StringUtils.arrayToDelimitedString( resp.items, ","));
+        return resp;
+    }
 
     private void sendVideoToTelegram(String chatId, String id) throws IOException {
         HttpClient httpClient2 = HttpClients.createDefault();
